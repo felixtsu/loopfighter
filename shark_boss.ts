@@ -8,30 +8,24 @@ namespace shark {
     let boss:Sprite = null
     let bossInvulnerable = false;
     let playerSprite:Sprite = null;
+    let finalBlowLaunched :boolean = false;
+
+    let headSprite:Sprite
+    let bodySprite:Sprite
+    let footSprite:Sprite
+
     const SHARK_MAX_HP = 100
 
-    export function spawnBoss (_playerSprite : Sprite, initHandler:boolean) {
-        boss = sprites.create(img`
-            .............ccfff..............
-            ...........ccddbcf..............
-            ..........ccddbbf...............
-            ..........fccbbcf...............
-            .....fffffccccccff.........ccc..
-            ...ffbbbbbbbcbbbbcfff....ccbbc..
-            ..fbbbbbbbbcbcbbbbcccff.cdbbc...
-            ffbbbbbbffbbcbcbbbcccccfcdbbf...
-            fbcbbb11ff1bcbbbbbcccccffbbf....
-            fbbb11111111bbbbbcccccccbbcf....
-            .fb11133cc11bbbbcccccccccccf....
-            ..fccc31c111bbbcccccbdbffbbcf...
-            ...fc13c111cbbbfcddddcc..fbbf...
-            ....fccc111fbdbbccdcc.....fbbf..
-            ........ccccfcdbbcc........fff..
-            .............fffff..............
-            `, SpriteKind.Shark)
-        bossNormalAnimation()
+    export function spawnBoss(_playerSprite : Sprite, initHandler:boolean) {
+        for (let attackObject of attackObjects) {
+            attackObject.stopAtOnce()
+        }
+        boss = sprites.create(assets.image`AlienBoss`, SpriteKind.Shark)
         boss.setPosition(140, randint(10, 110))
         boss.setVelocity(30, 30)
+        boss.setFlag(SpriteFlag.BounceOnWall, true)
+        attackObjects = []
+
         sprites.setDataNumber(boss, "hp", SHARK_MAX_HP)
         cubicbird.displayHitPointBar(sprites.readDataNumber(boss, "hp") / SHARK_MAX_HP * 100)
 
@@ -39,123 +33,68 @@ namespace shark {
 
         if (initHandler) {
             game.onUpdate(function () {
-            if (boss) {
-                moveBoss()
-            }
+                if (engine.status() == engine.STATUS.NORMAL && boss) {
+                    moveBoss()
+                }
             })
             game.onUpdateInterval(2000, function () {
-                if (boss) {
-                    bossAttackAnimation()
+                if (engine.status() == engine.STATUS.NORMAL && boss) {
                     bossAttack()
+                }
+            })
+            game.onUpdateInterval(500, function () {
+                if (engine.status() == engine.STATUS.NORMAL && boss) {
+                    if (Math.percentChance((SHARK_MAX_HP - sprites.readDataNumber(boss, "hp")) / SHARK_MAX_HP)) {
+                        bossExplosionAttack()
+                    }
+                    
+                }
+            })
+
+            game.onUpdate(function() {
+                if (engine.engineTime() > 20000 && !finalBlowLaunched) {
+                    finalBlowLaunched = bossAngerAttack(120, 5000, 10000)
                 }
             })
         }
     }
 
-    function bossAttack () {
-        let teethSprite = sprites.createProjectileFromSprite(img`
-            ....................................
-            ....................................
-            ....................................
-            ............111.....................
-            ...........11111....................
-            ..........1cccc11...................
-            ...........c1c1c1...................
-            ............c3331...................
-            ...........c333c1...................
-            ...........c331c11..................
-            ..........cc13c111..................
-            ..........c111111...................
-            ...........cc1111...................
-            .............ccc....................
-            ....................................
-            ....................................
-            `, boss, -80, 0)
-        teethSprite.setKind(SpriteKind.EnemyProjectile)
+    function bossExplosionAttack() {
+        if (headSprite) {
+            attackEffect.explode(headSprite, 24, 1000)    
+        } 
+
+        if (bodySprite) {
+            attackEffect.explode(bodySprite, 24, 1000)    
+        } 
+        if (footSprite) {
+            attackEffect.explode(footSprite, 24, 1000)    
+        }   
+    
     }
 
-    function bossNormalAnimation () {
-        animation.runImageAnimation(
-        boss,
-        [img`
-            .............ccfff..............
-            ...........ccddbcf..............
-            ..........ccddbbf...............
-            ..........fccbbcf...............
-            .....fffffccccccff.........ccc..
-            ...ffbbbbbbbcbbbbcfff....ccbbc..
-            ..fbbbbbbbbcbcbbbbcccff.cdbbc...
-            ffbbbbbbffbbcbcbbbcccccfcdbbf...
-            fbcbbb11ff1bcbbbbbcccccffbbf....
-            fbbb11111111bbbbbcccccccbbcf....
-            .fb11133cc11bbbbcccccccccccf....
-            ..fccc31c111bbbcccccbdbffbbcf...
-            ...fc13c111cbbbfcddddcc..fbbf...
-            ....fccc111fbdbbccdcc.....fbbf..
-            ........ccccfcdbbcc........fff..
-            .............fffff..............
-            `,img`
-            .............ccfff..............
-            ............cddbbf..............
-            ...........cddbbf...............
-            ..........fccbbcf............ccc
-            ....ffffffccccccff.........ccbbc
-            ..ffbbbbbbbbbbbbbcfff.....cdbbc.
-            ffbbbbbbbbbcbcbbbbcccff..cddbbf.
-            fbcbbbbbffbbcbcbbbcccccfffdbbf..
-            fbbb1111ff1bcbcbbbcccccccbbbcf..
-            .fb11111111bbbbbbcccccccccbccf..
-            ..fccc33cc11bbbbccccccccfffbbcf.
-            ...fc131c111bbbcccccbdbc...fbbf.
-            ....f33c111cbbbfdddddcc.....fbbf
-            .....ff1111fbdbbfddcc........fff
-            .......cccccfbdbbfc.............
-            .............fffff..............
-            `,img`
-            ..............cfff..............
-            ............ccddbf..............
-            ...........cbddbff.........ccc..
-            ..........fccbbcf.........cbbc..
-            ...fffffffccccccff.......cdbc...
-            .ffcbbbbbbbbbbbbbcfff....cdbf...
-            fcbbbbbbbbbcbbbbbbcccff.cdbf....
-            fbcbbbbffbbbcbcbbbcccccffdcf....
-            fbb1111ffbbbcbcbbbccccccbbcf....
-            .fb11111111bbcbbbccccccccbbcf...
-            ..fccc33cb11bbbbcccccccfffbbf...
-            ...fc131c111bbbcccccbdbc..fbbf..
-            ....f33c111cbbccdddddbc....fff..
-            .....ff1111fdbbccddbcc..........
-            .......cccccfdbbbfcc............
-            .............fffff..............
-            `,img`
-            .............ccfff..............
-            ............cddbbf..............
-            ...........cddbbf...............
-            ..........fccbbcf............ccc
-            ....ffffffccccccff.........ccbbc
-            ..ffbbbbbbbbbbbbbcfff.....cdbbc.
-            ffbbbbbbbbbcbcbbbbcccff..cddbbf.
-            fbcbbbbbffbbcbcbbbcccccfffdbbf..
-            fbbb1111ff1bcbcbbbcccccccbbbcf..
-            .fb11111111bbbbbbcccccccccbccf..
-            ..fccc33cc11bbbbccccccccfffbbcf.
-            ...fc131c111bbbcccccbdbc...fbbf.
-            ....f33c111cbbbfdddddcc.....fbbf
-            .....ff1111fbdbbfddcc........fff
-            .......cccccfbdbbfc.............
-            .............fffff..............
-            `],
-        200,
-        true
-        )
+    function bossAttack () {
+         headSprite = sprites.createProjectileFromSprite(assets.image`BossProjectileHead`, boss, -100 + randint(-20, 20), 0)
+        headSprite.setKind(SpriteKind.EnemyProjectile)
+        headSprite.x -= 10
+        headSprite.y -= 43
+
+         bodySprite = sprites.createProjectileFromSprite(assets.image`BossProjectileBody`, boss, -100 + randint(-20, 20), 0)
+        bodySprite.x -= 10
+        bodySprite.y += 2
+        bodySprite.setKind(SpriteKind.EnemyProjectile)
+
+         footSprite = sprites.createProjectileFromSprite(assets.image`BossProjectileFoot`, boss, -100 + randint(-20, 20), 0)
+        footSprite.x -= 10
+        footSprite.y += 38
+        footSprite.setKind(SpriteKind.EnemyProjectile)
     }
 
     function moveBoss () {
         if (boss.x > 150) {
             boss.vx = -30
         }
-        if (boss.x < 40) {
+        if (boss.x < 120) {
             boss.vx = 30
         }
         if (boss.y > 110) {
@@ -165,140 +104,55 @@ namespace shark {
             boss.vy = 30
         }
     }
-    
-    function bossAttackAnimation () {
-        animation.runImageAnimation(
-        boss,
-        [img`
-            .................ccfff..............
-            ................cddbbf..............
-            ...............cddbbf...............
-            ..............fccbbcf............ccc
-            ........ffffffccccccff.........ccbbc
-            ......ffbbbbbbbbbbbbbcfff.....cdbbc.
-            ....ffbbbbbbbbbcbcbbbbcccff..cddbbf.
-            ....fbcbbbbbffbbcbcbbbcccccfffdbbf..
-            ....fbbb1111ff1bcbcbbbcccccccbbbcf..
-            .....fb11111111bbbbbbcccccccccbccf..
-            ......fccc33cc11bbbbccccccccfffbbcf.
-            .......fc131c111bbbcccccbdbc...fbbf.
-            ........f33c111cbbbfdddddcc.....fbbf
-            .........ff1111fbdbbfddcc........fff
-            ...........cccccfbdbbfc.............
-            .................fffff..............
-            `,img`
-            .................ccfff..............
-            ................cddbbf..............
-            ...............cddbbf...............
-            .........ffffffccbbcf...............
-            ......fffbbbbbbbbcccff..............
-            .....fbbbbbbbbbbbbbbbcfff......ccccc
-            .....bcbbbbbffbcbcbbbbcccff...cdbbbc
-            .....bbb1111ffbbcbcbbbcccccffcddbbc.
-            .....fb11111111bcbcbbbcccccccbdbbf..
-            ......fccc33c11bbbbbbcccccccccbbcf..
-            .......fc131cc11bbbbccccccccffbccf..
-            ........f33c1111bbbcccccbdbc..fbbcf.
-            .........ff1111cbbbfdddddcc....fbbf.
-            ...........ccc1fbdbbfddcc.......fbbf
-            ..............ccfbdbbfc..........fff
-            .................fffff..............
-            `,img`
-            ..................ccfff.............
-            .................cddbbf.............
-            ........fffffffffddbbf..............
-            .......fbbbbbbbbbfcbcf..............
-            .......fbbc111bffbbccffff...........
-            .......fb111111ffbbbbbcccff....ccccc
-            ........f1cc3311bbcbcbbccccf..cdbbbc
-            ........fcc131c1bbbcbcbcccccfcddbbc.
-            .........f111111bbbcbcbccccccbdbbf..
-            .........f1111111bbbbbccccccccbbcf..
-            ..........f111111bbbbcccccccffbccf..
-            ...........c1111cbbbcccccbdbc.fbbcf.
-            ............cc11cbbbfddddddc...fbbf.
-            ..............cffbdbbfdddcc.....fbbf
-            .................fbdbbfcc........fff
-            ..................fffff.............
-            `,img`
-            ....................ccfff...........
-            ..........fffffffffcbbbbf...........
-            .........fbbbbbbbbbfffbf............
-            .........fbb111bffbbbbff............
-            .........fb11111ffbbbbbcff..........
-            .........f1cccc11bbcbcbcccf.........
-            ..........fc1c1c1bbbcbcbcccf...ccccc
-            ............c3331bbbcbcbccccfccddbbc
-            ...........c333c1bbbbbbbcccccbddbcc.
-            ...........c331c11bbbbbcccccccbbcc..
-            ..........cc13c111bbbbccccccffbccf..
-            ..........c111111cbbbcccccbbc.fccf..
-            ...........cc1111cbbbfdddddc..fbbcf.
-            .............cccffbdbbfdddc....fbbf.
-            ..................fbdbbfcc......fbbf
-            ...................fffff.........fff
-            `,img`
-            ...........fffffff...ccfff..........
-            ..........fbbbbbbbffcbbbbf..........
-            ..........fbb111bbbbbffbf...........
-            ..........fb11111ffbbbbff...........
-            ..........f1cccc1ffbbbbbcff.........
-            ..........ffc1c1c1bbcbcbcccf........
-            ...........fcc3331bbbcbcbcccf..ccccc
-            ............c333c1bbbcbcbccccfcddbbc
-            ............c333c1bbbbbbbcccccddbcc.
-            ............c333c11bbbbbccccccbbcc..
-            ...........cc331c11bbbbccccccfbccf..
-            ...........cc13c11cbbbcccccbbcfccf..
-            ...........c111111cbbbfdddddc.fbbcf.
-            ............cc1111fbdbbfdddc...fbbf.
-            ..............cccfffbdbbfcc.....fbbf
-            ....................fffff........fff
-            `,img`
-            ....................................
-            ....................................
-            ....................................
-            ...............ccffff...............
-            ..............cddbbbf...............
-            .......ffffffcddbbbf................
-            .....ffbbbbbbbbbbbbbcfff.......ccccc
-            ...ffbbbbbbbbcbcbbbbbcccff....cdbbbc
-            ..fbbbbbbbbbbcbbcbbbbcccccfffcddbbc.
-            .fbcbbbbbbbbbbcbcbbbbccccccccbdbbf..
-            .fbbbbbbbfffbbcbbbbbccccccccccbbcf..
-            .ffbb1111fffbbcbbbbcccccccbcffbccf..
-            ..ff111111111bbbbccccccbbbcc..fbbcf.
-            ....ccccccc111bdbbbfddbccc.....ffbbf
-            ........ccccccfbdbbbfcc..........fff
-            ...............ffffff...............
-            `],
-        100,
-        false
-        )
-    }
 
-    function bossAngerAttack () {
-        bossInvulnerable = true
-        bossAttackAnimation()
-        cubicbird.moveTowards(boss, playerSprite, 100)
-        pause(1000)
-        bossInvulnerable = false
-        boss.setVelocity(30, 30)
-        bossNormalAnimation()
+    let attackObjects :attackEffect.AttackObject[] = []
+    let angerAttackLaunched = false;
+
+    function bossAngerAttack (width:number, duration:number, preparedDuration:number) :boolean {
+        if (angerAttackLaunched) {
+            return false;
+        }
+
+        angerAttackLaunched = true
+
+        let angerAttack = attackEffect.laserAttack(boss, attackEffect.LaserAttackDirection.LEFT, width, duration, preparedDuration)
+
+        attackObjects.push(angerAttack)
+
+        control.runInParallel(function() {
+            pause(duration + preparedDuration)
+            angerAttackLaunched = false
+        })
+        return true
     }
 
     export function takeDamage(damage : number) :boolean {
         if (!(bossInvulnerable)) {
             sprites.changeDataNumberBy(boss, "hp", -damage)
-            cubicbird.displayHitPointBar(sprites.readDataNumber(boss, "hp") / SHARK_MAX_HP * 100)
+            if (showBossHp) {
+                cubicbird.displayHitPointBar(sprites.readDataNumber(boss, "hp") / SHARK_MAX_HP * 100)
+            }
+            
             if (sprites.readDataNumber(boss, "hp") <= 0) {
                 boss.destroy(effects.disintegrate, 2000)
                 return true
-            } else if (sprites.readDataNumber(boss, "hp") % 3 == 1) {
-                bossAngerAttack()
+            } else if (sprites.readDataNumber(boss, "hp") == 50 
+            || sprites.readDataNumber(boss, "hp") == 20 || sprites.readDataNumber(boss, "hp") == 10 ) {
+                bossAngerAttack(50, 1000, 2000)
             }
         }
         return false
     }
 
+    let showBossHp:boolean = true
+
+    export function toggleBossHp() {
+        if (!showBossHp) {
+            cubicbird.displayHitPointBar(sprites.readDataNumber(boss, "hp") / SHARK_MAX_HP * 100)
+            showBossHp = true
+        } else {
+            cubicbird.displayHitPointBar(0)
+            showBossHp = false
+        }
+    }
 }
