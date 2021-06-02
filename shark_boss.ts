@@ -46,8 +46,7 @@ namespace shark {
                 if (engine.status() == engine.STATUS.NORMAL && boss) {
                     if (Math.percentChance((SHARK_MAX_HP - sprites.readDataNumber(boss, "hp")) / SHARK_MAX_HP)) {
                         bossExplosionAttack()
-                    }
-                    
+                    } 
                 }
             })
 

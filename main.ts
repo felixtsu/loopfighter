@@ -310,6 +310,11 @@ namespace engine {
             cubicbird.destroyAllSpriteOfKind(SpriteKind.TimeTravelPlayer)
             cubicbird.destroyAllSpriteOfKind(SpriteKind.SPRITE_KIND_ANIMATION_DUMMY)
 
+            if (destroyedUniverse <= 2) {
+                game.showLongText("We failed in Universe #" + destroyedUniverse.toString() + ", it has been (and will be) stopped forever.", DialogLayout.Center)
+            }
+            
+
             restartGame()   
         })
 
@@ -338,6 +343,8 @@ attackEffect.onLaserHit(SpriteKind.Player, function(sprite: Sprite) {
 attackEffect.onExplosionHit(SpriteKind.Player, function(sprite: Sprite) {
     engine.endGame()   
 })
-
 palette.setMonochrome()
+game.showLongText("The God of Stillness is coming to stop all universes forever.", DialogLayout.Full)
+game.showLongText("Just before the last 30 seconds of its arrival, scientists build a machine that could travel in Time dimension.", DialogLayout.Full)
+
 engine.restartGame()
